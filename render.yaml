@@ -1,0 +1,31 @@
+# Render Blueprint — one-click deploy of the Stripe Connect sample.
+# Docs: https://render.com/docs/blueprint-spec
+#
+# How it's used: push this folder to a Git repo, then either click the
+# "Deploy to Render" button in the README, or in the Render dashboard choose
+# "New → Blueprint" and point it at the repo. Render reads this file.
+#
+# Render injects PORT automatically; the server already reads process.env.PORT.
+services:
+  - type: web
+    name: rsr-stripe-connect
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      # Secrets — left blank on purpose (sync:false). Set them in the Render
+      # dashboard after the first deploy. The server refuses to start until
+      # STRIPE_SECRET_KEY is set (with a clear message).
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      # Set this to your Render service URL after the first deploy (e.g.
+      # https://rsr-stripe-connect.onrender.com) so onboarding return URLs and
+      # Checkout fallback URLs are correct, then redeploy.
+      - key: ROOT_URL
+        sync: false
+      - key: PLATFORM_FEE_PERCENT
+        value: "10"

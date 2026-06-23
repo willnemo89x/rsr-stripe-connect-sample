@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Red Seal Rescue — Stripe Connect demo</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="top">
+    <div class="seal"></div><b>Red Seal Rescue</b>
+    <span class="mono">· Stripe Connect demo</span>
+    <nav class="nav">
+      <a href="/" class="on">Home</a>
+      <a href="/onboard.html">Onboard</a>
+      <a href="/products.html">Products</a>
+      <a href="/storefront.html">Storefront</a>
+    </nav>
+  </div>
+
+  <div class="wrap">
+    <div class="kicker">Stripe Connect sample</div>
+    <h1>Coaches get paid. Platform takes a fee.</h1>
+    <p class="lead">A minimal, end-to-end Stripe Connect flow for Red Seal Rescue: coaches
+      onboard as connected accounts, you publish their coaching packages as products, and
+      tradespeople buy them through a storefront. Each sale uses a <b>destination charge</b>
+      with an <b>application fee</b>, so the platform monetizes every transaction.</p>
+
+    <div class="grid g3" style="margin-top:22px">
+      <a class="card" href="/onboard.html" style="display:block">
+        <h3>1 · Onboard coaches</h3>
+        <div class="sub">Create connected accounts and walk them through Stripe-hosted onboarding.</div>
+      </a>
+      <a class="card" href="/products.html" style="display:block">
+        <h3>2 · Create products</h3>
+        <div class="sub">Publish coaching packages at the platform level, linked to a coach.</div>
+      </a>
+      <a class="card" href="/storefront.html" style="display:block">
+        <h3>3 · Sell</h3>
+        <div class="sub">Customers buy via hosted Checkout; funds route to the coach minus the fee.</div>
+      </a>
+    </div>
+
+    <div class="card" style="margin-top:6px">
+      <h3>Before you start</h3>
+      <div class="sub">One-time setup (details in the README).</div>
+      <ol style="color:var(--ink2);font-size:14px;margin:0;padding-left:18px;line-height:1.9">
+        <li>Copy <span class="mono">.env.example</span> → <span class="mono">.env</span> and paste your <b>test-mode</b> secret key.</li>
+        <li><span class="mono">npm install</span> then <span class="mono">npm run dev</span>.</li>
+        <li>To test webhooks, run the Stripe CLI listener (see README) and paste the printed <span class="mono">whsec_…</span> into <span class="mono">.env</span>.</li>
+      </ol>
+    </div>
+  </div>
+</body>
+</html>

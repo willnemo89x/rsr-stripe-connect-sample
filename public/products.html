@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Create products — Stripe Connect demo</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="top">
+    <div class="seal"></div><b>Red Seal Rescue</b>
+    <span class="mono">· Stripe Connect demo</span>
+    <nav class="nav">
+      <a href="/">Home</a>
+      <a href="/onboard.html">Onboard</a>
+      <a href="/products.html" class="on">Products</a>
+      <a href="/storefront.html">Storefront</a>
+    </nav>
+  </div>
+
+  <div class="wrap">
+    <div class="kicker">Step 2</div>
+    <h1>Create coaching packages (products)</h1>
+    <p class="lead">Products are created on the <b>platform</b> account and linked to a coach
+      (connected account) via product metadata. Pick the coach who gets paid when it sells.</p>
+
+    <div class="card" style="margin-top:20px">
+      <h3>New product</h3>
+      <div class="sub">Creates a product with a default price, tagged with the coach's account id.</div>
+      <label class="fld">Coach (connected account that gets paid)
+        <select id="account"><option value="">Loading accounts…</option></select>
+      </label>
+      <div class="grid g2">
+        <label class="fld">Name
+          <input id="name" type="text" placeholder="e.g. 8-Week Red Seal Bootcamp" />
+        </label>
+        <label class="fld">Price
+          <input id="price" type="number" min="1" step="0.01" placeholder="299.00" />
+        </label>
+      </div>
+      <div class="grid g2">
+        <label class="fld">Currency
+          <select id="currency"><option value="usd">USD</option><option value="cad">CAD</option></select>
+        </label>
+        <label class="fld">Description (optional)
+          <input id="description" type="text" placeholder="Weekly calls, mock exams, study plan" />
+        </label>
+      </div>
+      <button class="btn primary" id="createBtn">Create product</button>
+      <div class="note" id="noAccountsNote" style="display:none">
+        No coaches have onboarded yet. <a href="/onboard.html">Onboard a coach first →</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="spread"><h3>Existing products</h3><button class="btn" id="refreshBtn">Refresh</button></div>
+      <div id="products"><div class="empty">Loading…</div></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+let toastT;
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2600);}
+function money(amount, currency){return new Intl.NumberFormat(undefined,{style:'currency',currency:(currency||'usd').toUpperCase()}).format(amount/100);}
+
+// Populate the coach dropdown from connected accounts.
+async function loadAccounts(){
+  const sel = $('#account');
+  try {
+    const accounts = await (await fetch('/api/accounts')).json();
+    if (!accounts.length){
+      sel.innerHTML = '<option value="">— none —</option>';
+      $('#noAccountsNote').style.display = 'block';
+      $('#createBtn').disabled = true;
+      return;
+    }
+    sel.innerHTML = accounts.map(a =>
+      `<option value="${a.accountId}">${a.displayName || a.accountId}${a.readyToReceivePayments ? '' : ' (not ready)'}</option>`
+    ).join('');
+  } catch(e){ toast(e.message); }
+}
+
+$('#createBtn').onclick = async () => {
+  const accountId = $('#account').value;
+  const name = $('#name').value.trim();
+  const priceFloat = parseFloat($('#price').value);
+  const currency = $('#currency').value;
+  const description = $('#description').value.trim();
+  if (!accountId) return toast('Pick a coach');
+  if (!name) return toast('Enter a name');
+  if (!priceFloat || priceFloat <= 0) return toast('Enter a price');
+
+  $('#createBtn').disabled = true;
+  try {
+    const r = await fetch('/api/products', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      // Stripe wants the smallest currency unit (cents), so multiply by 100.
+      body: JSON.stringify({ name, description, priceInCents: Math.round(priceFloat*100), currency, accountId })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Failed');
+    toast('Product created: ' + data.productId);
+    $('#name').value=''; $('#price').value=''; $('#description').value='';
+    loadProducts();
+  } catch(e){ toast(e.message); }
+  finally { $('#createBtn').disabled = false; }
+};
+
+async function loadProducts(){
+  const box = $('#products');
+  box.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const products = await (await fetch('/api/products')).json();
+    if (!Array.isArray(products)) throw new Error(products.error || 'Failed to load products');
+    if (!products.length){ box.innerHTML = '<div class="empty">No products yet. Create one above.</div>'; return; }
+    box.innerHTML = '';
+    products.forEach(p => {
+      const el = document.createElement('div');
+      el.style.cssText = 'padding:13px 0;border-bottom:1px solid var(--line)';
+      el.innerHTML = `
+        <div class="spread">
+          <div>
+            <div style="font-weight:700">${p.name}</div>
+            <div class="mono">coach: ${p.connectedAccountId || '(unlinked)'}</div>
+            ${p.description ? `<div style="color:var(--ink2);font-size:13px;margin-top:3px">${p.description}</div>` : ''}
+          </div>
+          <div class="price">${money(p.amount, p.currency)}</div>
+        </div>`;
+      box.appendChild(el);
+    });
+  } catch(e){ box.innerHTML = '<div class="empty">'+e.message+'</div>'; }
+}
+
+$('#refreshBtn').onclick = loadProducts;
+loadAccounts();
+loadProducts();
+</script>
+</body>
+</html>

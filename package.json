@@ -1,0 +1,19 @@
+{
+  "name": "rsr-stripe-connect-sample",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Red Seal Rescue — Stripe Connect sample: onboard coaches, create coaching-package products, sell via a storefront with destination charges + platform fees.",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "stripe": "^22.2.2"
+  }
+}

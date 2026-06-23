@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Storefront — Stripe Connect demo</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="top">
+    <div class="seal"></div><b>Red Seal Rescue</b>
+    <span class="mono">· Stripe Connect demo</span>
+    <nav class="nav">
+      <a href="/">Home</a>
+      <a href="/onboard.html">Onboard</a>
+      <a href="/products.html">Products</a>
+      <a href="/storefront.html" class="on">Storefront</a>
+    </nav>
+  </div>
+
+  <div class="wrap">
+    <div class="kicker">Step 3 · Customer view</div>
+    <h1>Coaching packages</h1>
+    <p class="lead">Every published package across all coaches. Buying opens Stripe's hosted
+      Checkout; the charge is a <b>destination charge</b> — funds go to the coach, the platform
+      keeps its fee.</p>
+
+    <div class="banner" id="testNote">
+      💳 Test mode — use card <b>4242 4242 4242 4242</b>, any future expiry, any CVC and ZIP.
+    </div>
+
+    <div class="card">
+      <h3>Products for sale</h3>
+      <div class="sub">Pulled live from the platform's Products API.</div>
+      <div id="products" class="grid g2"><div class="empty">Loading…</div></div>
+    </div>
+
+    <div class="card">
+      <h3>Coaches on the platform</h3>
+      <div class="sub">All connected accounts and whether they can currently receive payments.</div>
+      <div id="accounts"><div class="empty">Loading…</div></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+let toastT;
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2600);}
+function money(amount, currency){return new Intl.NumberFormat(undefined,{style:'currency',currency:(currency||'usd').toUpperCase()}).format(amount/100);}
+
+// Start hosted Checkout for a product (destination charge handled server-side).
+async function buy(productId, btn){
+  btn.disabled = true; btn.textContent = 'Redirecting…';
+  try {
+    const r = await fetch('/api/checkout', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ productId })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Failed');
+    window.location.href = data.url; // Stripe-hosted Checkout
+  } catch(e){ toast(e.message); btn.disabled = false; btn.textContent = 'Buy now'; }
+}
+
+async function loadProducts(){
+  const box = $('#products');
+  try {
+    const [products, accounts] = await Promise.all([
+      (await fetch('/api/products')).json(),
+      (await fetch('/api/accounts')).json(),
+    ]);
+    // Surface API errors instead of silently rendering an empty store.
+    if (!Array.isArray(products)) throw new Error(products.error || 'Failed to load products');
+    if (!Array.isArray(accounts)) throw new Error(accounts.error || 'Failed to load accounts');
+    const readyById = Object.fromEntries(accounts.map(a => [a.accountId, a.readyToReceivePayments]));
+
+    if (!products.length){ box.innerHTML = '<div class="empty">No products yet. Add some on the Products page.</div>'; return; }
+    box.innerHTML = '';
+    products.forEach(p => {
+      const sellerReady = readyById[p.connectedAccountId];
+      const el = document.createElement('div');
+      el.className = 'card'; el.style.margin = '0';
+      el.innerHTML = `
+        <div style="font-weight:700;font-size:16px">${p.name}</div>
+        ${p.description ? `<div style="color:var(--ink2);font-size:13px;margin:6px 0 10px">${p.description}</div>` : '<div style="height:8px"></div>'}
+        <div class="spread">
+          <div class="price">${money(p.amount, p.currency)}</div>
+          <button class="btn primary" data-buy ${sellerReady ? '' : 'disabled'}>Buy now</button>
+        </div>
+        ${sellerReady ? '' : '<div class="note">Coach can\'t receive payments yet — not buyable.</div>'}`;
+      const btn = el.querySelector('[data-buy]');
+      if (btn && sellerReady) btn.onclick = () => buy(p.id, btn);
+      box.appendChild(el);
+    });
+  } catch(e){ box.innerHTML = '<div class="empty">'+e.message+'</div>'; }
+}
+
+async function loadAccounts(){
+  const box = $('#accounts');
+  try {
+    const accounts = await (await fetch('/api/accounts')).json();
+    if (!Array.isArray(accounts)) throw new Error(accounts.error || 'Failed to load accounts');
+    if (!accounts.length){ box.innerHTML = '<div class="empty">No coaches yet.</div>'; return; }
+    box.innerHTML = '';
+    accounts.forEach(a => {
+      const el = document.createElement('div');
+      el.style.cssText = 'padding:11px 0;border-bottom:1px solid var(--line)';
+      el.innerHTML = `<div class="spread">
+        <div><div style="font-weight:600">${a.displayName || a.accountId}</div><div class="mono">${a.accountId}</div></div>
+        ${a.readyToReceivePayments ? '<span class="pill green">✓ Accepting payments</span>' : '<span class="pill amber">Onboarding</span>'}
+      </div>`;
+      box.appendChild(el);
+    });
+  } catch(e){ box.innerHTML = '<div class="empty">'+e.message+'</div>'; }
+}
+
+loadProducts();
+loadAccounts();
+</script>
+</body>
+</html>

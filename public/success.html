@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Thank you — Stripe Connect demo</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="top">
+    <div class="seal"></div><b>Red Seal Rescue</b>
+    <span class="mono">· Stripe Connect demo</span>
+    <nav class="nav">
+      <a href="/">Home</a>
+      <a href="/onboard.html">Onboard</a>
+      <a href="/products.html">Products</a>
+      <a href="/storefront.html">Storefront</a>
+    </nav>
+  </div>
+
+  <div class="wrap">
+    <div class="kicker">Payment complete</div>
+    <h1>🎉 Thanks — you're booked in.</h1>
+    <p class="lead">Your payment went through Stripe's hosted Checkout as a destination charge:
+      the platform kept its application fee and the rest was routed to the coach's connected account.</p>
+    <div class="card" style="margin-top:18px">
+      <div class="sub">Checkout session</div>
+      <div class="mono" id="sessionId">—</div>
+    </div>
+    <a class="btn primary" href="/storefront.html">Back to storefront</a>
+  </div>
+
+<script>
+  // Stripe replaced {CHECKOUT_SESSION_ID} in the success_url with the real id.
+  const sid = new URLSearchParams(location.search).get('session_id');
+  document.getElementById('sessionId').textContent = sid || '(none)';
+</script>
+</body>
+</html>

@@ -324,27 +324,26 @@ async function handleStripeWebhook(req, res) {
 
   const signature = req.headers['stripe-signature'];
 
-  let thinEvent;
+  // Verify the signature against the RAW body and return a V2 EventNotification.
+  // NOTE: in stripe-node v22 this method is `parseEventNotification` — it was
+  // renamed from the older `parseThinEvent` you'll see in some docs/snippets.
+  let notification;
   try {
-    // Verifies the signature against the RAW body and returns the thin event.
-    thinEvent = stripeClient.parseThinEvent(req.body, signature, webhookSecret);
+    notification = stripeClient.parseEventNotification(req.body, signature, webhookSecret);
   } catch (err) {
     console.error('✗ Webhook signature verification failed:', err.message);
     return res.status(400).json({ error: `Webhook signature verification failed: ${err.message}` });
   }
 
   try {
-    // Thin events carry minimal data — fetch the full event for context.
-    const event = await stripeClient.v2.core.events.retrieve(thinEvent.id);
-
     // Route on event type. We match by substring so we're resilient to the
     // configuration-type segment (e.g. [configuration.recipient]).
-    if (thinEvent.type.includes('account') && thinEvent.type.includes('requirements')) {
-      await onRequirementsUpdated(event);
-    } else if (thinEvent.type.includes('capability_status_updated')) {
-      await onCapabilityStatusUpdated(event);
+    if (notification.type.includes('account') && notification.type.includes('requirements')) {
+      await onRequirementsUpdated(notification);
+    } else if (notification.type.includes('capability_status_updated')) {
+      await onCapabilityStatusUpdated(notification);
     } else {
-      console.log(`ℹ️  Unhandled thin event type: ${thinEvent.type}`);
+      console.log(`ℹ️  Unhandled event type: ${notification.type}`);
     }
 
     // Always 2xx quickly so Stripe doesn't retry a handled event.
@@ -355,10 +354,13 @@ async function handleStripeWebhook(req, res) {
   }
 }
 
+// The EventNotification is "thin" — it carries fetchRelatedObject() (the account
+// this event is about) and fetchEvent() (the full event). We fetch the related
+// account and re-read its live status.
+
 // Requirements changed → re-read the account and collect anything now due.
-async function onRequirementsUpdated(event) {
-  // The related object is the account this event is about.
-  const account = await event.fetch_related_object();
+async function onRequirementsUpdated(notification) {
+  const account = await notification.fetchRelatedObject();
   const status = await getAccountStatus(account.id);
   console.log(
     `🔔 Requirements updated for ${account.id}: requirementsStatus=${status.requirementsStatus}, ` +
@@ -369,8 +371,8 @@ async function onRequirementsUpdated(event) {
 }
 
 // A capability flipped (e.g. transfers became active/inactive).
-async function onCapabilityStatusUpdated(event) {
-  const account = await event.fetch_related_object();
+async function onCapabilityStatusUpdated(notification) {
+  const account = await notification.fetchRelatedObject();
   const status = await getAccountStatus(account.id);
   console.log(
     `🔔 Capability status changed for ${account.id}: ` +

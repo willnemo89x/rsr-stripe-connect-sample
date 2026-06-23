@@ -84,8 +84,9 @@ watch the server log the handled events.
    secret into `STRIPE_WEBHOOK_SECRET`.
 
 The handler (`server.js` → Section 4) verifies the signature with
-`parseThinEvent`, fetches the full event via `v2.core.events.retrieve`, then
-loads the related account to re-read requirements/capabilities.
+`stripeClient.parseEventNotification(...)` (the stripe-node v22 name; older docs
+call it `parseThinEvent`), then uses the notification's `fetchRelatedObject()` to
+load the related account and re-read its requirements/capabilities.
 
 ---
 
